@@ -56,22 +56,9 @@ module Bluepill
       state :starting, :stopping, :restarting
 
       event :tick do
-        transition :starting => :up, :if => :process_running?
-        transition :starting => :down, :unless => :process_running?
-
-        transition :up => :up, :if => :process_running?
-        transition :up => :down, :unless => :process_running?
-
-        # The process failed to die after entering the stopping state. Change the state to reflect
-        # reality.
-        transition :stopping => :up, :if => :process_running?
-        transition :stopping => :down, :unless => :process_running?
-
-        transition :down => :up, :if => :process_running?
-        transition :down => :starting, :unless => :process_running?
-
-        transition :restarting => :up, :if => :process_running?
-        transition :restarting => :down, :unless => :process_running?
+        transition all => :up,              :if => :process_running?
+        transition all => :down,            :if => :process_stopped_and_monitored?
+        transition all => :unmonitored,     :if => :process_stopped_and_unmonitored?
       end
 
       event :start do
@@ -261,6 +248,14 @@ module Bluepill
       self.clear_pid unless @process_running
       @process_running
     end
+    
+    def process_stopped_and_monitored?
+      auto_start and not process_running?
+    end
+    
+    def process_stopped_and_unmonitored?
+      not auto_start or process_running?
+    end
 
     def start_process
       logger.warning "Executing start command: #{start_command}"
@@ -367,11 +362,18 @@ module Bluepill
     end
 
     def signal_process(code)
+      return nil unless actual_pid.present?
+      
       code = code.to_s.upcase if code.is_a?(String) || code.is_a?(Symbol)
       ::Process.kill(code, actual_pid)
       true
     rescue Exception => e
-      logger.err "Failed to signal process #{actual_pid} with code #{code}: #{e}"
+      logger.err "Failed to signal process #{actual_pid} with code #{code}: #{e.inspect}"
+      
+      if e.is_a?(Errno::ESRCH) and pid_file
+        File.open(pid_file, 'w') # reset pid file
+      end
+      
       false
     end
 
