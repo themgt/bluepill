@@ -22,25 +22,22 @@ module Bluepill
     def handle_command(application, command, *args)
       case command.to_sym
       when :status
-        puts self.send_to_daemon(application, :status, *args)
+        self.send_to_daemon(application, :status, *args)
       when *Application::PROCESS_COMMANDS
         # these need to be sent to the daemon and the results printed out
         affected = self.send_to_daemon(application, command, *args)
         if affected.empty?
-          puts "No processes effected"
+          "No processes effected"
         else
-          puts "Sent #{command} to:"
-          affected.each do |process|
-            puts "  #{process}"
-          end
+          "Sent #{command} to:" + affected.join(', ')
         end
       when :quit
         pid = pid_for(application)
         if System.pid_alive?(pid)
           ::Process.kill("TERM", pid)
-          puts "Killing bluepilld[#{pid}]"
+          "Killing bluepilld[#{pid}]"
         else
-          puts "bluepilld[#{pid}] not running"
+          "bluepilld[#{pid}] not running"
         end
       when :log
         log_file_location = self.send_to_daemon(application, :log_file)

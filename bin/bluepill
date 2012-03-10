@@ -119,6 +119,6 @@ if options[:command] == "load"
   end
 else
   target = ARGV.shift
-  controller.handle_command(options[:application], options[:command], target)
+  output = controller.handle_command(options[:application], options[:command], target)
+  puts output
 end
-

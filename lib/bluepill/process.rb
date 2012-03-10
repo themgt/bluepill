@@ -60,6 +60,10 @@ module Bluepill
         transition all => :down,            :if => :process_stopped_and_monitored?
         transition all => :unmonitored,     :if => :process_stopped_and_unmonitored?
       end
+      
+      event :started_process do
+        transition :starting => :started
+      end
 
       event :start do
         transition [:unmonitored, :down] => :starting
@@ -261,8 +265,8 @@ module Bluepill
       logger.warning "Executing start command: #{start_command}"
 
       if self.daemonize?
-        System.daemonize(start_command, self.system_command_options)
-
+        @actual_pid = System.daemonize(start_command, self.system_command_options)
+        started_process if @actual_pid
       else
         # This is a self-daemonizing process
         with_timeout(start_grace_time) do
