@@ -59,6 +59,7 @@ module Bluepill
         transition all => :up,              :if => :process_running?
         transition all => :down,            :if => :process_stopped_and_monitored?
         transition all => :unmonitored,     :if => :process_stopped_and_unmonitored?
+        transition :down => :starting,      :if => :process_stopped_and_monitored?
       end
       
       event :started_process do
