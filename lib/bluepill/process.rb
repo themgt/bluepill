@@ -56,10 +56,10 @@ module Bluepill
       state :starting, :stopping, :restarting
 
       event :tick do
-        transition all => :up,              :if => :process_running?
-        transition all => :down,            :if => :process_stopped_and_monitored?
-        transition all => :unmonitored,     :if => :process_stopped_and_unmonitored?
-        transition :down => :starting,      :if => :process_stopped_and_monitored?
+        transition all - [:up]          => :up,               :if => :process_running?
+        transition all - [:down]        => :down,             :if => :process_stopped_and_monitored?
+        transition all - [:unmonitored] => :unmonitored,      :if => :process_stopped_and_unmonitored?
+        transition :down => :starting,                        :if => :process_stopped_and_monitored?
       end
       
       event :started_process do
@@ -174,7 +174,7 @@ module Bluepill
           self.logger.warning "Clearing child list"
           self.children.clear
         end
-        logger.info "Going from #{transition.from_name} => #{transition.to_name}"
+        logger.info "Going from #{transition.from_name} => #{transition.to_name}: process: #{process_running?}/#{actual_pid}"
       end
     end
 
@@ -255,11 +255,11 @@ module Bluepill
     end
     
     def process_stopped_and_monitored?
-      auto_start and not process_running?
+      not process_running? and auto_start and not unmonitored?
     end
     
     def process_stopped_and_unmonitored?
-      not auto_start or process_running?
+      auto_start == false and not process_running?
     end
 
     def start_process
